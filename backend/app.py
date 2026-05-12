@@ -1,48 +1,49 @@
-import os
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Railway автоматически предоставляет DATABASE_URL
-app.config['SQLALCHEMY_DATABASE_PATH'] = os.getenv('DATABASE_URL', 'postgresql://user:pass@localhost:5432/db')
-# Фикс для SQLAlchemy: Railway выдает префикс postgres://, нужно postgresql://
-if app.config['SQLALCHEMY_DATABASE_PATH'].startswith("postgres://"):
-    app.config['SQLALCHEMY_DATABASE_PATH'] = app.config['SQLALCHEMY_DATABASE_PATH'].replace("postgres://", "postgresql://", 1)
+# Настройка БД (Берем DATABASE_URL или ставим заглушку)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://user:pass@localhost:5432/db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_PATH']
 db = SQLAlchemy(app)
 
-class Task(db.Model):
+# Модель данных
+class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
 
-with app.app_context():
-    db.create_all()
-
+# Эндпоинты
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    tasks = Task.query.all()
-    return jsonify([{"id": t.id, "title": t.title} for t in tasks])
+    items = Item.query.all()
+    return jsonify([{"id": i.id, "title": i.title} for i in items])
 
 @app.route('/api/data', methods=['POST'])
 def add_data():
     data = request.json
-    new_task = Task(title=data['title'])
-    db.session.add(new_task)
+    if not data or 'title' not in data:
+        return jsonify({"error": "No title"}), 400
+    new_item = Item(title=data['title'])
+    db.session.add(new_item)
     db.session.commit()
-    return jsonify({"id": new_task.id, "title": new_task.title}), 201
+    return jsonify({"id": new_item.id, "title": new_item.title}), 201
 
-@app.route('/api/data/<int:id>', methods=['DELETE'])
-def delete_data(id):
-    task = Task.query.get(id)
-    if task:
-        db.session.delete(task)
-        db.session.commit()
-        return '', 204
-    return jsonify({"error": "Not found"}), 404
+@app.route('/api/data/<int:item_id>', methods=['DELETE'])
+def delete_data(item_id):
+    item = Item.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return '', 204
 
+# ЗАПУСК: только если файл запущен напрямую, а не импортирован
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    with app.app_context():
+        # Пытаемся создать таблицы только при реальном старте сервера
+        db.create_all()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
