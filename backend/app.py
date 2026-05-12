@@ -1,23 +1,21 @@
+import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Настройка БД (Берем DATABASE_URL или ставим заглушку)
+# Настройка базы данных
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://user:pass@localhost:5432/db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Модель данных
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
 
-# Эндпоинты
 @app.route('/api/data', methods=['GET'])
 def get_data():
     items = Item.query.all()
@@ -40,10 +38,9 @@ def delete_data(item_id):
     db.session.commit()
     return '', 204
 
-# ЗАПУСК: только если файл запущен напрямую, а не импортирован
+# ВАЖНО: Весь исполняемый код переносим сюда
 if __name__ == '__main__':
     with app.app_context():
-        # Пытаемся создать таблицы только при реальном старте сервера
         db.create_all()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
