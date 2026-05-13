@@ -1,0 +1,19 @@
+name: Deploy to Yandex Cloud
+on:
+  push:
+    branches: [main] # или master, проверь имя своей ветки
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/название-твоей-папки-на-сервере
+            git pull origin main
+            sudo docker-compose up -d --build
