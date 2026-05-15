@@ -26,4 +26,11 @@ jobs:
             git fetch origin
             git checkout ${{ github.ref_name }}
             git pull origin ${{ github.ref_name }}
-            sudo docker compose up -d --build -f ${{ env.ENV_FILE }}
+            
+            # Устанавливаем современный Docker Compose v2 вручную на сервер
+            mkdir -p ~/.docker/cli-plugins/
+            curl -SL https://github.com/docker/compose/releases/download/v2.26.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+            chmod +x ~/.docker/cli-plugins/docker-compose
+            
+            # Запускаем деплой через обновленный плагин
+            docker compose -f ${{ env.ENV_FILE }} up -d --build
