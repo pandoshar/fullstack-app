@@ -23,14 +23,22 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/fullstack-app
+            
+            # Разрешаем Git автоматическое слияние веток при pull
+            git config pull.rebase false
+            
             git fetch origin
             git checkout ${{ github.ref_name }}
-            git pull origin ${{ github.ref_name }}
             
-            # Устанавливаем современный Docker Compose v2 вручную на сервер
+            # Принудительно подтягиваем изменения, даже если история разошлась
+            git pull origin ${{ github.ref_name }} --no-rebase
+            
+            # Скачиваем Docker Compose v2 (если его еще нет)
             mkdir -p ~/.docker/cli-plugins/
-            curl -SL https://github.com/docker/compose/releases/download/v2.26.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-            chmod +x ~/.docker/cli-plugins/docker-compose
+            if [ ! -f ~/.docker/cli-plugins/docker-compose ]; then
+              curl -SL https://github.com/docker/compose/releases/download/v2.26.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+              chmod +x ~/.docker/cli-plugins/docker-compose
+            fi
             
-            # Запускаем деплой через обновленный плагин
-            docker compose -f ${{ env.ENV_FILE }} up -d --build
+            # ОБЯЗАТЕЛЬНО запускаем через SUDO, чтобы не было ошибки прав (permission denied)
+            sudo ~/.docker/cli-plugins/docker-compose -f ${{ env.ENV_FILE }} up -d --build
