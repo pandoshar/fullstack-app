@@ -1,20 +1,12 @@
 name: Multi-Environment Deploy
 on:
   push:
-    branches: [main, develop]
+    branches: [main] # Этот воркфлоу следит ТОЛЬКО за main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Set Environment Variables
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENV_FILE=docker-compose.prod.yml" >> $GITHUB_ENV
-          else
-            echo "ENV_FILE=docker-compose.staging.yml" >> $GITHUB_ENV
-          fi
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -23,22 +15,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/fullstack-app
-            
-            # Разрешаем Git автоматическое слияние веток при pull
             git config pull.rebase false
-            
             git fetch origin
-            git checkout ${{ github.ref_name }}
+            git checkout main
+            git pull origin main --no-rebase
             
-            # Принудительно подтягиваем изменения, даже если история разошлась
-            git pull origin ${{ github.ref_name }} --no-rebase
-            
-            # Скачиваем Docker Compose v2 (если его еще нет)
-            mkdir -p ~/.docker/cli-plugins/
-            if [ ! -f ~/.docker/cli-plugins/docker-compose ]; then
-              curl -SL https://github.com/docker/compose/releases/download/v2.26.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-              chmod +x ~/.docker/cli-plugins/docker-compose
-            fi
-            
-            # ОБЯЗАТЕЛЬНО запускаем через SUDO, чтобы не было ошибки прав (permission denied)
-            sudo ~/.docker/cli-plugins/docker-compose -p fullstack-staging -f ${{ env.ENV_FILE }} up -d --build
+            # Принудительно запускаем именно prod-файл с именем проекта production
+            sudo ~/.docker/cli-plugins/docker-compose -p fullstack-production -f docker-compose.prod.yml up -d --build
