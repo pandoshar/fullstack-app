@@ -26,7 +26,7 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h1>Student: Ivan Ivanov (ID: 12345)</h1>
+      <h1>Student: Adilet Askarbekov (ID: 230141034)</h1>
       <form onSubmit={addTask}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="New task..." />
         <button type="submit">Add</button>
