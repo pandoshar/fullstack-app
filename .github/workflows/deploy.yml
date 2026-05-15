@@ -41,4 +41,4 @@ jobs:
             fi
             
             # ОБЯЗАТЕЛЬНО запускаем через SUDO, чтобы не было ошибки прав (permission denied)
-            sudo ~/.docker/cli-plugins/docker-compose -f ${{ env.ENV_FILE }} up -d --build
+            sudo ~/.docker/cli-plugins/docker-compose -p fullstack-staging -f ${{ env.ENV_FILE }} up -d --build
