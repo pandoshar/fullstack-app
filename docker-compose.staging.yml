@@ -1,36 +1,45 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15
+    container_name: fullstack-staging-postgres
     environment:
-      POSTGRES_DB: mydb_staging
-      POSTGRES_PASSWORD: staging_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Aseladi123  # Укажи здесь свой пароль
+      POSTGRES_DB: fullstack_staging          # Отдельная БД для стейджинга
     volumes:
       - postgres_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fullstack-staging-backend
     environment:
-      DATABASE_URL: postgresql://postgres:staging_password@postgres/mydb_staging
+      - DATABASE_URL=postgresql://postgres:your_secure_password@postgres:5432/fullstack_staging
+      - FLASK_ENV=development
+    ports:
+      - "5001:5000"  # Бэкэнд стейджинга будет доступен на порту 5001
     depends_on:
       - postgres
+    networks:
+      - staging-network
 
   frontend:
-    build: ./frontend
-    environment:
-      VITE_API_URL: /api
-    depends_on:
-      - backend
-
-  nginx:
-    image: nginx:alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fullstack-staging-frontend
     ports:
-      - '8080:80' # Стейджинг будет доступен по порту 8080
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - frontend
-      - backend
+      - "8080:3000"  # Направляем порт 8080 сервера напрямую на 3000 порт фронтенда
+    networks:
+      - staging-network
 
 volumes:
-  postgres_staging_data:
+  postgres_staging_data:  # Полностью изолированный диск для тестовых данных
+
+networks:
+  staging-network:
